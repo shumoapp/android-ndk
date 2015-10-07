@@ -43,16 +43,16 @@ public class MainActivity extends Activity {
 
         // initialize native audio system
         updateNativeAudioUI();
-        createSLEngine(Integer.parseInt(nativeSampleRate), Integer.parseInt(nativeSampleBufSize));
+        NativeFastPlayer.createSLEngine(Integer.parseInt(nativeSampleRate), Integer.parseInt(nativeSampleBufSize));
         isPlaying = false;
     }
     @Override
     protected void onDestroy() {
         if( isPlaying ) {
-            stopPlay();
+            NativeFastPlayer.stopPlay();
         }
         //shutdown();
-        deleteSLEngine();
+        NativeFastPlayer.deleteSLEngine();
         isPlaying = false;
         super.onDestroy();
     }
@@ -84,16 +84,16 @@ public class MainActivity extends Activity {
         if(isPlaying) {
             return;
         }
-        if(!createSLBufferQueueAudioPlayer()) {
+        if(!NativeFastPlayer.createSLBufferQueueAudioPlayer()) {
             status_view.setText("Failed to create Audio Player");
             return;
         }
-        if(!createAudioRecorder()) {
-            deleteSLBufferQueueAudioPlayer();
+        if(!NativeFastPlayer.createAudioRecorder()) {
+            NativeFastPlayer.deleteSLBufferQueueAudioPlayer();
             status_view.setText("Failed to create Audio Recorder");
             return;
         }
-        startPlay();   //this must include startRecording()
+        NativeFastPlayer.startPlay();   //this must include startRecording()
         isPlaying = true;
         status_view.setText("Engine Echoing ....");
     }
@@ -102,10 +102,10 @@ public class MainActivity extends Activity {
         if(!isPlaying) {
             return;
         }
-        stopPlay();  //this must include stopRecording()
+        NativeFastPlayer.stopPlay();  //this must include stopRecording()
         updateNativeAudioUI();
-        deleteSLBufferQueueAudioPlayer();
-        deleteAudioRecorder();
+        NativeFastPlayer.deleteSLBufferQueueAudioPlayer();
+        NativeFastPlayer.deleteAudioRecorder();
         isPlaying = false;
     }
     public void getLowLatencyParameters(View view) {
@@ -125,24 +125,4 @@ public class MainActivity extends Activity {
                 "nativeSampleFormat  = " + nativeSampleFormat);
 
     }
-    /*
-     * Loading our Libs
-     */
-    static {
-        System.loadLibrary("echo");
-    }
-
-    /*
-     * jni function implementations...
-     */
-    public static native void createSLEngine(int rate, int framesPerBuf);
-    public static native void deleteSLEngine();
-
-    public static native boolean createSLBufferQueueAudioPlayer();
-    public static native void deleteSLBufferQueueAudioPlayer();
-
-    public static native boolean createAudioRecorder();
-    public static native void deleteAudioRecorder();
-    public static native void startPlay();
-    public static native void stopPlay();
 }

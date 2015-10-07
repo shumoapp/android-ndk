@@ -48,26 +48,26 @@ bool EngineService(void* ctx, uint32_t msg, void* data );
 
 extern "C" {
 JNIEXPORT void JNICALL
-        Java_com_google_sample_echo_MainActivity_createSLEngine(JNIEnv *env, jclass, jint, jint);
+        Java_com_google_sample_echo_NativeFastPlayer_createSLEngine(JNIEnv *env, jclass, jint, jint);
 JNIEXPORT void JNICALL
-        Java_com_google_sample_echo_MainActivity_deleteSLEngine(JNIEnv *env, jclass type);
+        Java_com_google_sample_echo_NativeFastPlayer_deleteSLEngine(JNIEnv *env, jclass type);
 JNIEXPORT jboolean JNICALL
-        Java_com_google_sample_echo_MainActivity_createSLBufferQueueAudioPlayer(JNIEnv *env, jclass);
+        Java_com_google_sample_echo_NativeFastPlayer_createSLBufferQueueAudioPlayer(JNIEnv *env, jclass);
 JNIEXPORT void JNICALL
-        Java_com_google_sample_echo_MainActivity_deleteSLBufferQueueAudioPlayer(JNIEnv *env, jclass type);
+        Java_com_google_sample_echo_NativeFastPlayer_deleteSLBufferQueueAudioPlayer(JNIEnv *env, jclass type);
 
 JNIEXPORT jboolean JNICALL
-        Java_com_google_sample_echo_MainActivity_createAudioRecorder(JNIEnv *env, jclass type);
+        Java_com_google_sample_echo_NativeFastPlayer_createAudioRecorder(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL
-        Java_com_google_sample_echo_MainActivity_deleteAudioRecorder(JNIEnv *env, jclass type);
+        Java_com_google_sample_echo_NativeFastPlayer_deleteAudioRecorder(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL
-        Java_com_google_sample_echo_MainActivity_startPlay(JNIEnv *env, jclass type);
+        Java_com_google_sample_echo_NativeFastPlayer_startPlay(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL
-        Java_com_google_sample_echo_MainActivity_stopPlay(JNIEnv *env, jclass type);
+        Java_com_google_sample_echo_NativeFastPlayer_stopPlay(JNIEnv *env, jclass type);
 }
 
 JNIEXPORT void JNICALL
-Java_com_google_sample_echo_MainActivity_createSLEngine(
+Java_com_google_sample_echo_NativeFastPlayer_createSLEngine(
         JNIEnv *env, jclass type, jint sampleRate, jint framesPerBuf) {
     SLresult result;
     memset(&engine, 0, sizeof(engine));
@@ -108,7 +108,7 @@ Java_com_google_sample_echo_MainActivity_createSLEngine(
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_google_sample_echo_MainActivity_createSLBufferQueueAudioPlayer(JNIEnv *env, jclass type) {
+Java_com_google_sample_echo_NativeFastPlayer_createSLBufferQueueAudioPlayer(JNIEnv *env, jclass type) {
     SampleFormat sampleFormat;
     memset(&sampleFormat, 0, sizeof(sampleFormat));
     sampleFormat.pcmFormat_ = (uint16_t)engine.bitsPerSample_;
@@ -130,7 +130,7 @@ Java_com_google_sample_echo_MainActivity_createSLBufferQueueAudioPlayer(JNIEnv *
 }
 
 JNIEXPORT void JNICALL
-Java_com_google_sample_echo_MainActivity_deleteSLBufferQueueAudioPlayer(JNIEnv *env, jclass type) {
+Java_com_google_sample_echo_NativeFastPlayer_deleteSLBufferQueueAudioPlayer(JNIEnv *env, jclass type) {
     if(engine.player_) {
         delete engine.player_;
         engine.player_= nullptr;
@@ -138,7 +138,7 @@ Java_com_google_sample_echo_MainActivity_deleteSLBufferQueueAudioPlayer(JNIEnv *
 }
 
 JNIEXPORT jboolean JNICALL
-Java_com_google_sample_echo_MainActivity_createAudioRecorder(JNIEnv *env, jclass type) {
+Java_com_google_sample_echo_NativeFastPlayer_createAudioRecorder(JNIEnv *env, jclass type) {
     SampleFormat sampleFormat;
     memset(&sampleFormat, 0, sizeof(sampleFormat));
     sampleFormat.pcmFormat_ = static_cast<uint16_t>(engine.bitsPerSample_);
@@ -157,7 +157,7 @@ Java_com_google_sample_echo_MainActivity_createAudioRecorder(JNIEnv *env, jclass
 }
 
 JNIEXPORT void JNICALL
-Java_com_google_sample_echo_MainActivity_deleteAudioRecorder(JNIEnv *env, jclass type) {
+Java_com_google_sample_echo_NativeFastPlayer_deleteAudioRecorder(JNIEnv *env, jclass type) {
     if(engine.recorder_)
         delete engine.recorder_;
 
@@ -165,7 +165,7 @@ Java_com_google_sample_echo_MainActivity_deleteAudioRecorder(JNIEnv *env, jclass
 }
 
 JNIEXPORT void JNICALL
-Java_com_google_sample_echo_MainActivity_startPlay(JNIEnv *env, jclass type) {
+Java_com_google_sample_echo_NativeFastPlayer_startPlay(JNIEnv *env, jclass type) {
 
     engine.frameCount_  = 0;
     /*
@@ -179,7 +179,7 @@ Java_com_google_sample_echo_MainActivity_startPlay(JNIEnv *env, jclass type) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_google_sample_echo_MainActivity_stopPlay(JNIEnv *env, jclass type) {
+Java_com_google_sample_echo_NativeFastPlayer_stopPlay(JNIEnv *env, jclass type) {
     engine.recorder_->Stop();
     engine.player_ ->Stop();
 
@@ -190,7 +190,7 @@ Java_com_google_sample_echo_MainActivity_stopPlay(JNIEnv *env, jclass type) {
 }
 
 JNIEXPORT void JNICALL
-Java_com_google_sample_echo_MainActivity_deleteSLEngine(JNIEnv *env, jclass type) {
+Java_com_google_sample_echo_NativeFastPlayer_deleteSLEngine(JNIEnv *env, jclass type) {
     delete engine.recBufQueue_;
     delete engine.freeBufQueue_;
     releaseSampleBufs(engine.bufs_, engine.bufCount_);
