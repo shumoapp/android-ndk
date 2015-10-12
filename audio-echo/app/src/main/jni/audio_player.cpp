@@ -53,9 +53,23 @@ void AudioPlayer::ProcessSLCallback(SLAndroidSimpleBufferQueueItf bq) {
     devShadowQueue_->pop();
     buf->size_ = 0;
     freeQueue_->push(buf);
-    while(playQueue_->front(&buf) && devShadowQueue_->push(buf)) {
+    while(playQueue_->front(&buf) && devShadowQueue_->push(buf) && buf->size_>0 ) {
+        //LOGI("AudioPlayer::ProcessSLCallback, Enqueue, buf->size_: %d", buf->size_);
         (*bq)->Enqueue(bq, buf->buf_, buf->size_);
         playQueue_->pop();
+    }
+
+    //if the play queue is less than the PLAY_KICKSTART_BUFFER_COUNT, start the PCM decoder again.
+    if (playQueue_->size() < PLAY_KICKSTART_BUFFER_COUNT)
+    {
+        LOGI("AudioPlayer::ProcessSLCallback, playQueue_ too low, start decoding again");
+        callback_(ctx_,ENGINE_SERVICE_CONTINUE_DECODING, NULL);
+    }
+
+    if (decodingFinished)
+    {
+        callback_(ctx_,ENGINE_SERVICE_RESTART_DECODING, NULL);
+        decodingFinished = false;
     }
 }
 
@@ -181,6 +195,11 @@ SLresult AudioPlayer::Start(void) {
         }
     }
     return SL_BOOLEAN_TRUE;
+}
+
+void AudioPlayer::DecodingFinished(void) {
+
+    decodingFinished = true;
 }
 
 void AudioPlayer::Stop(void) {

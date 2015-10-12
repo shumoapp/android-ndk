@@ -23,6 +23,8 @@ public class NativeFastPlayer {
 
     public static native boolean createAudioRecorder();
     public static native void deleteAudioRecorder();
+    public static native boolean createAudioDecoder(byte[] uri);
+    public static native void deleteAudioDecoder();
     public static native void startPlay();
     public static native void stopPlay();
 }

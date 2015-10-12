@@ -11,6 +11,7 @@
         android:layout_height="wrap_content"
         android:text="@string/StartEcho"
         android:onClick="startEcho" />
+
     <Button
         android:id="@+id/button_stop_capture"
         android:layout_width="wrap_content"
@@ -20,6 +21,25 @@
         android:layout_toEndOf="@+id/button_start_capture"
         android:layout_alignBottom="@+id/button_start_capture"
         android:layout_alignParentEnd="true" />
+
+    <Button
+        android:id="@+id/button_start_ringtone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/StartRingtone"
+        android:onClick="startRingtone"
+        android:layout_below="@+id/button_start_capture"
+        android:layout_marginTop="39dp" />
+
+    <Button
+        android:id="@+id/button_stop_ringtone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/StopRingtone"
+        android:onClick="stopRingtone"
+        android:layout_alignTop="@+id/button_start_ringtone"
+        android:layout_alignParentEnd="true" />
+
     <Button
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -35,6 +55,8 @@
         android:id="@+id/statusView"
         android:layout_centerHorizontal="true"
         android:layout_alignParentBottom="true"/>
+
+
 
 </RelativeLayout>
 

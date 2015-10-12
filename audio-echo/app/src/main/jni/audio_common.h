@@ -33,9 +33,9 @@
  * Sample Buffer Controls...
  */
 #define RECORD_DEVICE_KICKSTART_BUF_COUNT   2
-#define PLAY_KICKSTART_BUFFER_COUNT         3
+#define PLAY_KICKSTART_BUFFER_COUNT         12
 #define DEVICE_SHADOW_BUFFER_QUEUE_LEN      4
-#define BUF_COUNT                           16
+#define BUF_COUNT                           1024
 
 
 struct SampleFormat {
@@ -68,6 +68,9 @@ __inline__ uint64_t GetSystemTicks(void) {
  */
 #define ENGINE_SERVICE_MSG_KICKSTART_PLAYER    1
 #define ENGINE_SERVICE_MSG_RETRIEVE_DUMP_BUFS  2
+#define ENGINE_SERVICE_CONTINUE_DECODING  3
+#define ENGINE_SERVICE_RESTART_DECODING  4
+#define ENGINE_SERVICE_DECODING_FINISHED  5
 typedef bool (*ENGINE_CALLBACK)(void* pCTX, uint32_t msg, void* pData);
 
 /*

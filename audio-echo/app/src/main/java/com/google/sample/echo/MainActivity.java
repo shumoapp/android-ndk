@@ -18,8 +18,12 @@ package com.google.sample.echo;
 
 import android.app.Activity;
 import android.content.Context;
+import android.database.Cursor;
 import android.media.AudioManager;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -32,6 +36,8 @@ public class MainActivity extends Activity {
     String  nativeSampleBufSize;
     String  nativeSampleFormat;
     Boolean isPlaying;
+    Boolean isDecoding;
+    private String rintTonePath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,10 +47,14 @@ public class MainActivity extends Activity {
         status_view = (TextView)findViewById(R.id.statusView);
         queryNativeAudioParameters();
 
+        Uri uri= RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_RINGTONE);
+        rintTonePath = getRealPathFromURI(uri);
+
         // initialize native audio system
         updateNativeAudioUI();
         NativeFastPlayer.createSLEngine(Integer.parseInt(nativeSampleRate), Integer.parseInt(nativeSampleBufSize));
         isPlaying = false;
+        isDecoding = false;
     }
     @Override
     protected void onDestroy() {
@@ -54,7 +64,22 @@ public class MainActivity extends Activity {
         //shutdown();
         NativeFastPlayer.deleteSLEngine();
         isPlaying = false;
+        isDecoding = false;
         super.onDestroy();
+    }
+
+    private String getRealPathFromURI(Uri contentURI) {
+        String result;
+        Cursor cursor = getContentResolver().query(contentURI, null, null, null, null);
+        if (cursor == null) { // Source is Dropbox or other similar local file path
+            result = contentURI.getPath();
+        } else {
+            cursor.moveToFirst();
+            int idx = cursor.getColumnIndex(MediaStore.Audio.AudioColumns.DATA);
+            result = cursor.getString(idx);
+            cursor.close();
+        }
+        return result;
     }
 
     @Override
@@ -81,7 +106,7 @@ public class MainActivity extends Activity {
 
     public void startEcho(View view) {
         status_view.setText("StartCapture Button Clicked\n");
-        if(isPlaying) {
+        if(isPlaying || isDecoding) {
             return;
         }
         if(!NativeFastPlayer.createSLBufferQueueAudioPlayer()) {
@@ -99,7 +124,7 @@ public class MainActivity extends Activity {
     }
 
     public void stopEcho(View view) {
-        if(!isPlaying) {
+        if(!isPlaying && !isDecoding) {
             return;
         }
         NativeFastPlayer.stopPlay();  //this must include stopRecording()
@@ -108,6 +133,37 @@ public class MainActivity extends Activity {
         NativeFastPlayer.deleteAudioRecorder();
         isPlaying = false;
     }
+
+    public void startRingtone(View view) {
+        status_view.setText("StartCapture Button Clicked\n");
+        if(isDecoding || isPlaying) {
+            return;
+        }
+        if(!NativeFastPlayer.createSLBufferQueueAudioPlayer()) {
+            status_view.setText("Failed to create Audio Player");
+            return;
+        }
+        if(!NativeFastPlayer.createAudioDecoder(rintTonePath.getBytes())) {
+            NativeFastPlayer.deleteSLBufferQueueAudioPlayer();
+            status_view.setText("Failed to create Audio Recorder");
+            return;
+        }
+        NativeFastPlayer.startPlay();   //this must include startDecoding()
+        isDecoding = true;
+        status_view.setText("Ringtone playing ...");
+    }
+
+    public void stopRingtone(View view) {
+        if(!isDecoding && !isPlaying) {
+            return;
+        }
+        NativeFastPlayer.stopPlay();  //this must include stopDecoding()
+        updateNativeAudioUI();
+        NativeFastPlayer.deleteSLBufferQueueAudioPlayer();
+        NativeFastPlayer.deleteAudioRecorder();
+        isDecoding = false;
+    }
+
     public void getLowLatencyParameters(View view) {
         updateNativeAudioUI();
         return;

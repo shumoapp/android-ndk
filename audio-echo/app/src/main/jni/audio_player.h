@@ -37,6 +37,8 @@ class AudioPlayer {
     ENGINE_CALLBACK callback_;
     void           *ctx_;
 
+    bool decodingFinished = false;
+
 #ifdef  ENABLE_LOG
     AndroidLog  *logFile_;
 #endif
@@ -46,10 +48,12 @@ public:
     void        SetBufQueue(AudioQueue *playQ, AudioQueue *freeQ);
     SLresult    Start(void);
     void        Stop(void);
+    void        DecodingFinished(void);
     void        ProcessSLCallback(SLAndroidSimpleBufferQueueItf bq);
     uint32_t    dbgGetDevBufCount(void);
     void        PlayAudioBuffers(int32_t count);
     void        RegisterCallback(ENGINE_CALLBACK cb, void *ctx);
+
 };
 
 #endif //NATIVE_AUDIO_AUDIO_PLAYER_H

@@ -21,6 +21,7 @@
 #include <SLES/OpenSLES.h>
 
 #include "audio_common.h"
+#include "audio_decoder.h"
 #include "audio_recorder.h"
 #include "audio_player.h"
 
@@ -34,6 +35,7 @@ struct EchoAudioEngine {
     SLEngineItf  slEngineItf_;
 
     AudioRecorder  *recorder_;
+    AudioDecoder   *decoder_;
     AudioPlayer    *player_;
     AudioQueue     *freeBufQueue_;    //Owner of the queue
     AudioQueue     *recBufQueue_;     //Owner of the queue
@@ -43,6 +45,8 @@ struct EchoAudioEngine {
     uint32_t     frameCount_;
 };
 static EchoAudioEngine engine;
+
+std::string uriString;
 
 bool EngineService(void* ctx, uint32_t msg, void* data );
 
@@ -60,6 +64,10 @@ JNIEXPORT jboolean JNICALL
         Java_com_google_sample_echo_NativeFastPlayer_createAudioRecorder(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL
         Java_com_google_sample_echo_NativeFastPlayer_deleteAudioRecorder(JNIEnv *env, jclass type);
+JNIEXPORT jboolean JNICALL
+        Java_com_google_sample_echo_NativeFastPlayer_createAudioDecoder(JNIEnv *env, jclass type, jbyteArray uri);
+JNIEXPORT void JNICALL
+        Java_com_google_sample_echo_NativeFastPlayer_deleteAudioDecoder(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL
         Java_com_google_sample_echo_NativeFastPlayer_startPlay(JNIEnv *env, jclass type);
 JNIEXPORT void JNICALL
@@ -107,8 +115,8 @@ Java_com_google_sample_echo_NativeFastPlayer_createSLEngine(
     }
 }
 
-JNIEXPORT jboolean JNICALL
-Java_com_google_sample_echo_NativeFastPlayer_createSLBufferQueueAudioPlayer(JNIEnv *env, jclass type) {
+jboolean createSLBufferQueueAudioPlayer(void)
+{
     SampleFormat sampleFormat;
     memset(&sampleFormat, 0, sizeof(sampleFormat));
     sampleFormat.pcmFormat_ = (uint16_t)engine.bitsPerSample_;
@@ -129,12 +137,22 @@ Java_com_google_sample_echo_NativeFastPlayer_createSLBufferQueueAudioPlayer(JNIE
     return JNI_TRUE;
 }
 
-JNIEXPORT void JNICALL
-Java_com_google_sample_echo_NativeFastPlayer_deleteSLBufferQueueAudioPlayer(JNIEnv *env, jclass type) {
+JNIEXPORT jboolean JNICALL
+Java_com_google_sample_echo_NativeFastPlayer_createSLBufferQueueAudioPlayer(JNIEnv *env, jclass type) {
+    return createSLBufferQueueAudioPlayer();
+}
+
+void deleteSLBufferQueueAudioPlayer(void)
+{
     if(engine.player_) {
         delete engine.player_;
         engine.player_= nullptr;
     }
+}
+
+JNIEXPORT void JNICALL
+Java_com_google_sample_echo_NativeFastPlayer_deleteSLBufferQueueAudioPlayer(JNIEnv *env, jclass type) {
+    deleteSLBufferQueueAudioPlayer();
 }
 
 JNIEXPORT jboolean JNICALL
@@ -156,12 +174,73 @@ Java_com_google_sample_echo_NativeFastPlayer_createAudioRecorder(JNIEnv *env, jc
     return JNI_TRUE;
 }
 
+void deleteAudioDecoder(void)
+{
+    if(engine.decoder_) delete engine.decoder_;
+
+    engine.decoder_ = nullptr;
+}
+
+
 JNIEXPORT void JNICALL
 Java_com_google_sample_echo_NativeFastPlayer_deleteAudioRecorder(JNIEnv *env, jclass type) {
     if(engine.recorder_)
         delete engine.recorder_;
 
     engine.recorder_ = nullptr;
+}
+
+jboolean createAudioDecoder(void) {
+
+    SampleFormat sampleFormat;
+    memset(&sampleFormat, 0, sizeof(sampleFormat));
+    sampleFormat.pcmFormat_ = static_cast<uint16_t>(engine.bitsPerSample_);
+
+    // SampleFormat.representation_ = SL_ANDROID_PCM_REPRESENTATION_SIGNED_INT;
+    sampleFormat.channels_ = engine.sampleChannels_;
+    sampleFormat.sampleRate_ = engine.fastPathSampleRate_;
+    sampleFormat.framesPerBuf_ = engine.fastPathFramesPerBuf_;
+    engine.decoder_ = new AudioDecoder(&sampleFormat, engine.slEngineItf_, uriString.c_str());
+
+    if (!engine.decoder_) {
+        return JNI_FALSE;
+    }
+
+    engine.decoder_->SetBufQueues(engine.freeBufQueue_, engine.recBufQueue_);
+    engine.decoder_->RegisterCallback(EngineService, (void *) &engine);
+
+    return JNI_TRUE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_google_sample_echo_NativeFastPlayer_createAudioDecoder(JNIEnv* env, jclass type, jbyteArray uri) {
+
+    //GetStringUTFChars doesn't work well on some devices - HTC M8 in particular
+    // convert Java string to UTF-8
+    //utf8uri = env->GetStringUTFChars(uri, JNI_FALSE);
+    //assert(NULL != utf8uri);
+
+    //http://stackoverflow.com/questions/20536296/jni-call-convert-jstring-to-char
+    //http://banachowski.com/deprogramming/2012/02/working-around-jni-utf-8-strings/
+    jbyte *text_input = env->GetByteArrayElements(uri, NULL);
+    jsize size = env->GetArrayLength(uri);
+
+    uriString.clear();
+    uriString.append((char *)text_input, size);
+
+    jboolean result = createAudioDecoder();
+
+    env->ReleaseByteArrayElements(uri, text_input, NULL);
+
+    // release the Java string and UTF-8
+    //env->ReleaseStringUTFChars(uri, utf8uri);
+
+    return result?JNI_TRUE:JNI_FALSE;
+}
+
+JNIEXPORT void JNICALL
+Java_com_google_sample_echo_NativeFastPlayer_deleteAudioDecoder(JNIEnv *env, jclass type) {
+    deleteAudioDecoder();
 }
 
 JNIEXPORT void JNICALL
@@ -175,17 +254,21 @@ Java_com_google_sample_echo_NativeFastPlayer_startPlay(JNIEnv *env, jclass type)
         LOGE("====%s failed", __FUNCTION__);
         return;
     }
-    engine.recorder_->Start();
+    if(engine.recorder_) engine.recorder_->Start();
+    if(engine.decoder_) engine.decoder_->Start();
 }
 
 JNIEXPORT void JNICALL
 Java_com_google_sample_echo_NativeFastPlayer_stopPlay(JNIEnv *env, jclass type) {
-    engine.recorder_->Stop();
+    if(engine.recorder_) engine.recorder_->Stop();
+    if(engine.decoder_) engine.decoder_->Stop();
     engine.player_ ->Stop();
 
-    delete engine.recorder_;
+    if(engine.recorder_) delete engine.recorder_;
+    if(engine.decoder_) delete engine.decoder_;
     delete engine.player_;
     engine.recorder_ = NULL;
+    engine.decoder_ = NULL;
     engine.player_ = NULL;
 }
 
@@ -203,14 +286,15 @@ Java_com_google_sample_echo_NativeFastPlayer_deleteSLEngine(JNIEnv *env, jclass 
 
 uint32_t dbgEngineGetBufCount(void) {
     uint32_t count = engine.player_->dbgGetDevBufCount();
-    count += engine.recorder_->dbgGetDevBufCount();
+    if(engine.recorder_) count += engine.recorder_->dbgGetDevBufCount();
+    if(engine.decoder_) count += engine.decoder_->dbgGetDevBufCount();
     count += engine.freeBufQueue_->size();
     count += engine.recBufQueue_->size();
 
     LOGE("Buf Disrtibutions: PlayerDev=%d, RecDev=%d, FreeQ=%d, "
                  "RecQ=%d",
          engine.player_->dbgGetDevBufCount(),
-         engine.recorder_->dbgGetDevBufCount(),
+         engine.recorder_?engine.recorder_->dbgGetDevBufCount():engine.decoder_->dbgGetDevBufCount(),
          engine.freeBufQueue_->size(),
          engine.recBufQueue_->size());
     if(count != engine.bufCount_) {
@@ -218,6 +302,24 @@ uint32_t dbgEngineGetBufCount(void) {
              BUF_COUNT, count);
     }
     return count;
+}
+
+void restartDecoder(void)
+{
+    dbgEngineGetBufCount();
+    if(engine.decoder_)
+    {
+        engine.decoder_->Stop();//this also empties the devShadowQueue_
+        delete engine.decoder_;
+    }
+    LOGI("restartRecorder, delete engine.recorder_");
+    engine.decoder_ = nullptr;
+    LOGI("restartRecorder, engine.recorder_ = nullptr");
+
+    createAudioDecoder();
+    //startPlay();
+    engine.decoder_->SoftStart();
+    dbgEngineGetBufCount();
 }
 
 /*
@@ -234,6 +336,22 @@ bool EngineService(void* ctx, uint32_t msg, void* data ) {
         case ENGINE_SERVICE_MSG_RETRIEVE_DUMP_BUFS:
             *(static_cast<uint32_t*>(data)) = dbgEngineGetBufCount();
             break;
+
+        /*Resume decoding again - typically when the buffer que is getting low on buffers*/
+        case ENGINE_SERVICE_CONTINUE_DECODING:
+            if(engine.decoder_) engine.decoder_->Resume();
+            return true;
+
+        /*Notify the player that the decoding finished*/
+        case ENGINE_SERVICE_DECODING_FINISHED:
+            if(engine.player_) engine.player_->DecodingFinished();
+            return true;
+
+        /*Recreate the decoder in order to play the file again*/
+        case ENGINE_SERVICE_RESTART_DECODING:
+            if(engine.decoder_) restartDecoder();
+            return true;
+
         default:
             assert(false);
             return false;
